@@ -114,18 +114,6 @@ parse_args() {
 
   while [ $# -gt 0 ]; do
     case "$1" in
-      -n|--namespace|--context|--kubeconfig)
-        if [ $# -lt 2 ]; then
-          echo "Missing value for $1" >&2
-          exit 1
-        fi
-        kubectl_args+=("$1" "$2")
-        shift 2
-        ;;
-      --namespace=*|--context=*|--kubeconfig=*)
-        kubectl_args+=("$1")
-        shift
-        ;;
       --)
         shift
         while [ $# -gt 0 ]; do
@@ -134,7 +122,8 @@ parse_args() {
         done
         ;;
       -*)
-        echo "Unknown option: $1" >&2
+        echo "Unknown option after command: $1" >&2
+        echo "Put kubectl flags before the command, for example: please -n namespace stop POD" >&2
         exit 1
         ;;
       *)

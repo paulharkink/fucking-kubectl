@@ -84,30 +84,17 @@ _fucking_completion() {
   fi
 
   if [[ "$cur" == -* ]]; then
-    COMPREPLY=($(compgen -W "-n --namespace --context --kubeconfig -h --help" -- "$cur"))
     return 0
   fi
 
   i=$((command_index + 1))
   while [ "$i" -lt "$COMP_CWORD" ]; do
     case "${COMP_WORDS[$i]}" in
-      -n|--namespace|--context|--kubeconfig)
-        if [ $((i + 1)) -lt "$COMP_CWORD" ]; then
-          kubectl_args+=("${COMP_WORDS[$i]}" "${COMP_WORDS[$((i + 1))]}")
-          i=$((i + 2))
-        else
-          break
-        fi
-        ;;
-      --namespace=*|--context=*|--kubeconfig=*)
-        kubectl_args+=("${COMP_WORDS[$i]}")
-        i=$((i + 1))
-        ;;
       --)
         i=$((i + 1))
         ;;
       -*)
-        i=$((i + 1))
+        return 0
         ;;
       *)
         positionals+=("${COMP_WORDS[$i]}")

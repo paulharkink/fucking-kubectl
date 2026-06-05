@@ -81,30 +81,17 @@ if [[ -z "$command" || $CURRENT -eq $command_index ]]; then
 fi
 
 if [[ "${words[CURRENT]}" == -* ]]; then
-  _describe 'options' global_options
   return 0
 fi
 
 i=$(( command_index + 1 ))
 while (( i < CURRENT )); do
   case "${words[i]}" in
-    -n|--namespace|--context|--kubeconfig)
-      if (( i + 1 < CURRENT )); then
-        kubectl_args+=("${words[i]}" "${words[$(( i + 1 ))]}")
-        (( i += 2 ))
-      else
-        break
-      fi
-      ;;
-    --namespace=*|--context=*|--kubeconfig=*)
-      kubectl_args+=("${words[i]}")
-      (( i++ ))
-      ;;
     --)
       (( i++ ))
       ;;
     -*)
-      (( i++ ))
+      return 0
       ;;
     *)
       positionals+=("${words[i]}")
