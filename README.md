@@ -11,39 +11,6 @@ fucking die api-7d9f8b6c9d-j2k4m
 
 Both commands use your active `kubectl` context and namespace. No namespace flags are added for you.
 
-## Kubectl flags
-
-`[KUBECTL_FLAGS]` means a small set of kubectl selection flags that must come immediately after `please` or `fucking`, before the funny command word.
-
-Supported flags:
-
-```text
--n, --namespace NAME
---namespace=NAME
---context NAME
---context=NAME
---kubeconfig PATH
---kubeconfig=PATH
-```
-
-Correct:
-
-```sh
-please -n hermes stop api-7d9f8b6c9d-j2k4m
-please --namespace=ai invade open-webui-0
-fucking --context prod die api-7d9f8b6c9d-j2k4m
-```
-
-Not supported:
-
-```sh
-please stop -n hermes api-7d9f8b6c9d-j2k4m
-please invade open-webui-0 -n ai
-fucking die api-7d9f8b6c9d-j2k4m --context prod
-```
-
-This is intentionally stricter than `kubectl`: command-specific arguments stay simple, and kubectl selection flags always live in one predictable place.
-
 ## Commands
 
 ### `please`
@@ -138,6 +105,39 @@ Equivalent:
 ```sh
 kubectl [KUBECTL_FLAGS] delete TYPE NAME --grace-period=0 --force
 ```
+
+## Kubectl flags
+
+`[KUBECTL_FLAGS]` means a small set of kubectl selection flags that must come immediately after `please` or `fucking`, before the funny command word.
+
+Supported flags:
+
+```text
+-n, --namespace NAME
+--namespace=NAME
+--context NAME
+--context=NAME
+--kubeconfig PATH
+--kubeconfig=PATH
+```
+
+Correct:
+
+```sh
+please -n hermes stop api-7d9f8b6c9d-j2k4m
+please --namespace=ai invade open-webui-0
+fucking --context prod die api-7d9f8b6c9d-j2k4m
+```
+
+Not supported:
+
+```sh
+please stop -n hermes api-7d9f8b6c9d-j2k4m
+please invade open-webui-0 -n ai
+fucking die api-7d9f8b6c9d-j2k4m --context prod
+```
+
+This is intentionally stricter than `kubectl`: command-specific arguments stay simple, and kubectl selection flags always live in one predictable place.
 
 ## Completion
 
