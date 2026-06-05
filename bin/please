@@ -1,0 +1,162 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat >&2 <<'EOF'
+please: polite Kubernetes shortcuts for the current namespace.
+
+Usage:
+  please stop POD
+  please nope TYPE NAME
+  please restart DEPLOYMENT
+  please why POD
+  please sherlock POD
+  please invade POD [CONTAINER]
+
+Options:
+  -h, --help  Show this help.
+
+Commands:
+  stop     Delete a pod normally.
+           Runs: kubectl delete pod POD
+
+  nope     Delete any namespaced resource normally.
+           Runs: kubectl delete TYPE NAME
+
+  restart  Roll out a deployment restart.
+           Runs: kubectl rollout restart deployment DEPLOYMENT
+
+  why      Inspect why a pod died or is unhealthy.
+           Shows pod status, related events, and previous logs.
+
+  sherlock Alias for "why".
+
+  invade   Open an interactive shell in a pod.
+           Tries zsh, then bash, then falls back to sh.
+
+Examples:
+  please stop api-7d9f8b6c9d-j2k4m
+  please nope deployment api
+  please nope deployments.apps api
+  please restart api
+  please why api-7d9f8b6c9d-j2k4m
+  please sherlock api-7d9f8b6c9d-j2k4m
+  please invade api-7d9f8b6c9d-j2k4m
+  please invade api-7d9f8b6c9d-j2k4m app
+
+Notes:
+  Uses your active kubectl context and namespace.
+  Use "fucking" for the same delete intent with --grace-period=0 --force.
+EOF
+}
+
+if [ $# -lt 1 ]; then
+  usage
+  exit 1
+fi
+
+command="$1"
+shift
+
+section() {
+  printf '\n== %s ==\n' "$1"
+}
+
+case "$command" in
+  stop|die)
+    if [ $# -ne 1 ]; then
+      echo "Usage: please stop POD" >&2
+      exit 1
+    fi
+
+    kubectl delete pod "$1"
+    ;;
+  nope)
+    if [ $# -ne 2 ]; then
+      echo "Usage: please nope TYPE NAME" >&2
+      exit 1
+    fi
+
+    kubectl delete "$1" "$2"
+    ;;
+  restart)
+    if [ $# -ne 1 ]; then
+      echo "Usage: please restart DEPLOYMENT" >&2
+      exit 1
+    fi
+
+    kubectl rollout restart deployment "$1"
+    ;;
+  why|sherlock)
+    if [ $# -ne 1 ]; then
+      echo "Usage: please why POD" >&2
+      exit 1
+    fi
+
+    pod="$1"
+
+    section "Pod"
+    kubectl get pod "$pod" -o wide
+
+    section "Events"
+    kubectl get events --field-selector "involvedObject.name=$pod" --sort-by=.lastTimestamp
+
+    section "Previous Logs"
+    kubectl logs "$pod" --previous --tail=200
+    ;;
+  invade)
+    container=""
+    pod=""
+
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        -*)
+          echo "Usage: please invade POD [CONTAINER]" >&2
+          exit 1
+          ;;
+        *)
+          if [ -z "$pod" ]; then
+            pod="$1"
+          elif [ -z "$container" ]; then
+            container="$1"
+          else
+            echo "Usage: please invade POD [CONTAINER]" >&2
+            exit 1
+          fi
+          shift
+          ;;
+      esac
+    done
+
+    if [ -z "$pod" ]; then
+      echo "Usage: please invade POD [CONTAINER]" >&2
+      exit 1
+    fi
+
+    probe_args=(exec "$pod")
+    interactive_args=(exec -it "$pod")
+
+    if [ -n "$container" ]; then
+      probe_args+=(-c "$container")
+      interactive_args+=(-c "$container")
+    fi
+
+    shell="sh"
+    for candidate in zsh bash; do
+      if kubectl "${probe_args[@]}" -- sh -c "command -v '$candidate'" >/dev/null 2>&1; then
+        shell="$candidate"
+        break
+      fi
+    done
+
+    kubectl "${interactive_args[@]}" -- "$shell"
+    ;;
+  -h|--help|help)
+    usage
+    ;;
+  *)
+    echo "Unknown please command: $command" >&2
+    usage
+    exit 1
+    ;;
+esac

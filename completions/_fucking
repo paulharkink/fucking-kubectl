@@ -1,0 +1,43 @@
+#compdef fucking
+
+local curcontext="$curcontext" state
+typeset -A opt_args
+
+_arguments -C \
+  '(-h --help)'{-h,--help}'[show help]' \
+  '1:command:->commands' \
+  '2:resource type or pod:->resource_or_pod' \
+  '3:resource name:->resource_names' \
+  '*:: :->rest'
+
+case $state in
+  commands)
+    local -a commands
+    commands=(
+      'die:force-delete a pod in the current Kubernetes namespace immediately'
+      'nope:force-delete a resource in the current Kubernetes namespace immediately'
+      'help:show help'
+    )
+    _describe 'commands' commands
+    ;;
+  resource_or_pod)
+    if [[ "${words[2]}" == "die" ]]; then
+      local -a pods
+      pods=(${(f)"$(kubectl get pods --no-headers -o custom-columns=:metadata.name 2>/dev/null)"})
+      _describe 'pods' pods
+    elif [[ "${words[2]}" == "nope" ]]; then
+      local -a resource_types
+      resource_types=(${(f)"$(kubectl api-resources --verbs=delete --namespaced=true -o name 2>/dev/null)"})
+      _describe 'resource types' resource_types
+    fi
+    ;;
+  resource_names)
+    if [[ "${words[2]}" == "nope" && -n "${words[3]}" ]]; then
+      local -a resources
+      resources=(${(f)"$(kubectl get "${words[3]}" --no-headers -o custom-columns=:metadata.name 2>/dev/null)"})
+      _describe "${words[3]}" resources
+    fi
+    ;;
+esac
+
+return 0
