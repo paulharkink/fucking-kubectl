@@ -1,8 +1,9 @@
 # fucking-kubectl
 
-Polite and impolite Kubernetes shortcuts for the commands you type when a pod is either asking nicely or absolutely refusing to cooperate.
+Polite and impolite Kubernetes shortcuts for the things you actually do to pods.
 
-`please` is the normal path. `fucking` is the escalation path.
+`please` is for polite society: logs, shells, restarts, and regular deletes.
+`fucking` is for when polite society has failed: force-delete it now.
 
 ```sh
 please stop api-7d9f8b6c9d-j2k4m
@@ -28,6 +29,8 @@ please follow api-7d9f8b6c9d-j2k4m app
 ```
 
 `please show` and `please follow` keep normal plaintext logs readable, but make structured logs much easier to scan:
+
+![Readable log output with colored timestamps and log levels](assets/logs-demo.svg)
 
 - timestamps are dimmed
 - log levels are colored by severity
