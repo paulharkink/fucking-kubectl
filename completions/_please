@@ -1,7 +1,7 @@
 #compdef please
 
 local -a kubectl_args command_specs global_options positionals
-local command="" command_index=$CURRENT arg_position
+local command="" command_index=$CURRENT arg_position show_all_seen=false
 
 command_specs=(
   'stop:delete a pod in the current Kubernetes namespace'
@@ -10,6 +10,8 @@ command_specs=(
   'why:inspect why a pod died or is unhealthy'
   'sherlock:alias for why'
   'invade:open an interactive shell in a pod'
+  'show:show pod logs'
+  'follow:follow pod logs'
   'help:show help'
 )
 
@@ -81,6 +83,9 @@ if [[ -z "$command" || $CURRENT -eq $command_index ]]; then
 fi
 
 if [[ "${words[CURRENT]}" == -* ]]; then
+  if [[ "$command" == "show" && "$show_all_seen" != true ]]; then
+    compadd -- --all
+  fi
   return 0
 fi
 
@@ -89,6 +94,14 @@ while (( i < CURRENT )); do
   case "${words[i]}" in
     --)
       (( i++ ))
+      ;;
+    --all)
+      if [[ "$command" == "show" ]]; then
+        show_all_seen=true
+        (( i++ ))
+      else
+        return 0
+      fi
       ;;
     -*)
       return 0
@@ -128,7 +141,7 @@ case "$command" in
       compadd -a resources
     fi
     ;;
-  invade)
+  invade|follow)
     if (( arg_position == 1 )); then
       local -a pods
       pods=(${(f)"$(kubectl "${kubectl_args[@]}" get pods --no-headers -o custom-columns=:metadata.name 2>/dev/null)"})
@@ -137,6 +150,22 @@ case "$command" in
       local -a containers
       containers=(${(f)"$(kubectl "${kubectl_args[@]}" get pod "${positionals[1]}" -o 'jsonpath={range .spec.containers[*]}{.name}{"\n"}{end}' 2>/dev/null)"})
       compadd -a containers
+    fi
+    ;;
+  show)
+    if (( arg_position == 1 )); then
+      local -a pods
+      pods=(${(f)"$(kubectl "${kubectl_args[@]}" get pods --no-headers -o custom-columns=:metadata.name 2>/dev/null)"})
+      compadd -a pods
+    elif (( arg_position == 2 )); then
+      local -a containers
+      containers=(${(f)"$(kubectl "${kubectl_args[@]}" get pod "${positionals[1]}" -o 'jsonpath={range .spec.containers[*]}{.name}{"\n"}{end}' 2>/dev/null)"})
+      compadd -a containers
+      if [[ "$show_all_seen" != true ]]; then
+        compadd -- --all
+      fi
+    elif (( arg_position == 3 && "$show_all_seen" != true )); then
+      compadd -- --all
     fi
     ;;
 esac

@@ -13,6 +13,8 @@ Usage:
   please why POD
   please sherlock POD
   please invade POD [CONTAINER]
+  please show POD [CONTAINER] [--all]
+  please follow POD [CONTAINER]
 
 Options:
   -h, --help  Show this help.
@@ -40,6 +42,12 @@ Commands:
   invade   Open an interactive shell in a pod.
            Tries zsh, then bash, then falls back to sh.
 
+  show     Show recent pod logs, with readable JSON log formatting when possible.
+           Runs: kubectl logs --tail=200 POD
+
+  follow   Follow pod logs, with readable JSON log formatting when possible.
+           Runs: kubectl logs -f POD
+
 Examples:
   please stop api-7d9f8b6c9d-j2k4m
   please nope deployment api
@@ -49,6 +57,9 @@ Examples:
   please sherlock api-7d9f8b6c9d-j2k4m
   please invade api-7d9f8b6c9d-j2k4m
   please invade api-7d9f8b6c9d-j2k4m app
+  please show api-7d9f8b6c9d-j2k4m
+  please show api-7d9f8b6c9d-j2k4m app --all
+  please follow api-7d9f8b6c9d-j2k4m app
 
 Notes:
   Uses your active kubectl context and namespace.
@@ -107,6 +118,90 @@ k() {
   else
     kubectl "$@"
   fi
+}
+
+pretty_logs() {
+  if ! command -v jq >/dev/null 2>&1; then
+    cat "$@"
+    return
+  fi
+
+  jq -Rr '
+    def esc: "\u001b[";
+    def reset: esc + "0m";
+    def dim($value): esc + "2m" + ($value | tostring) + reset;
+    def cyan($value): esc + "36m" + ($value | tostring) + reset;
+    def red($value): esc + "31m" + ($value | tostring) + reset;
+    def yellow($value): esc + "33m" + ($value | tostring) + reset;
+    def green($value): esc + "32m" + ($value | tostring) + reset;
+    def gray($value): esc + "90m" + ($value | tostring) + reset;
+    def faint($value): esc + "38;5;244m" + ($value | tostring) + reset;
+
+    def has_log_shape:
+      type == "object"
+      and (
+        has("message") or has("msg")
+        or has("level") or has("severity")
+        or has("@timestamp") or has("timestamp")
+        or has("logger_name") or has("logger")
+      );
+
+    def field($names):
+      . as $object
+      | reduce $names[] as $name (
+          null;
+          if . == null and ($object | has($name)) and $object[$name] != null
+          then $object[$name]
+          else .
+          end
+        ) // "";
+
+    def logger:
+      (field(["logger_name", "logger", "loggerName"]) | tostring)
+      | if length > 0 then split(".") | last else "" end;
+
+    def color_level:
+      . as $level
+      | ($level | tostring | ascii_upcase) as $upper
+      | if $upper == "" then ""
+        elif ["ERROR", "ERR", "FATAL", "CRITICAL"] | index($upper) then red($level)
+        elif ["WARN", "WARNING"] | index($upper) then yellow($level)
+        elif ["INFO", "NOTICE"] | index($upper) then green($level)
+        elif $upper == "DEBUG" then cyan($level)
+        elif $upper == "TRACE" then gray($level)
+        else $level
+        end;
+
+    def color_plaintext:
+      . as $line
+      | if test("^[[:space:]]*(ERROR|ERR|FATAL|CRITICAL|WARN|WARNING|INFO|NOTICE|DEBUG|TRACE)\\b") then
+          sub("^(?<prefix>[[:space:]]*)(?<level>ERROR|ERR|FATAL|CRITICAL|WARN|WARNING|INFO|NOTICE|DEBUG|TRACE)\\b"; "\(.prefix)\(.level | color_level)")
+        elif test("^[[:space:]]*\\[(ERROR|ERR|FATAL|CRITICAL|WARN|WARNING|INFO|NOTICE|DEBUG|TRACE)\\]") then
+          sub("^(?<prefix>[[:space:]]*)\\[(?<level>ERROR|ERR|FATAL|CRITICAL|WARN|WARNING|INFO|NOTICE|DEBUG|TRACE)\\]"; "\(.prefix)[\(.level | color_level)]")
+        elif test("^[[:space:]]*(time|timestamp|ts)=") and test("\\blevel=\"?(ERROR|ERR|FATAL|CRITICAL|WARN|WARNING|INFO|NOTICE|DEBUG|TRACE)\"?\\b") then
+          sub("^(?<prefix>[[:space:]]*(?:time|timestamp|ts)=\"?[^[:space:]\"]+\"?)"; "\(dim(.prefix))")
+          | sub("\\blevel=\"?(?<level>ERROR|ERR|FATAL|CRITICAL|WARN|WARNING|INFO|NOTICE|DEBUG|TRACE)\"?"; "level=\(.level | color_level)")
+        elif test("^[[:space:]]*[0-9]{4}-[0-9]{2}-[0-9]{2}[T ][^[:space:]]+[[:space:]]+(ERROR|ERR|FATAL|CRITICAL|WARN|WARNING|INFO|NOTICE|DEBUG|TRACE)\\b") then
+          sub("^(?<prefix>[[:space:]]*)(?<timestamp>[0-9]{4}-[0-9]{2}-[0-9]{2}[T ][^[:space:]]+)(?<space>[[:space:]]+)(?<level>ERROR|ERR|FATAL|CRITICAL|WARN|WARNING|INFO|NOTICE|DEBUG|TRACE)\\b"; "\(.prefix)\(dim(.timestamp))\(.space)\(.level | color_level)")
+        else
+          faint($line)
+        end;
+
+    def format_log:
+      [
+        (field(["@timestamp", "timestamp", "time", "ts"]) | if length > 0 then dim(.) else "" end),
+        (field(["level", "severity"]) | color_level),
+        field(["thread_name", "thread"]),
+        (logger | if length > 0 then cyan(.) else "" end),
+        field(["message", "msg"])
+      ]
+      | map(tostring)
+      | map(select(length > 0))
+      | join("  ");
+
+    . as $raw
+    | try (fromjson | if has_log_shape then format_log else ($raw | color_plaintext) end) catch ($raw | color_plaintext)
+  ' "$@"
 }
 
 parse_args() {
@@ -178,7 +273,78 @@ case "$command" in
     k get events --field-selector "involvedObject.name=$pod" --sort-by=.lastTimestamp
 
     section "Previous Logs"
-    k logs "$pod" --previous --tail=200
+    k logs "$pod" --previous --tail=200 | pretty_logs
+    ;;
+  pretty)
+    pretty_logs "$@"
+    ;;
+  show|follow)
+    positionals=()
+    all_logs=false
+
+    while [ $# -gt 0 ]; do
+      case "$1" in
+        --all)
+          if [ "$command" != "show" ]; then
+            echo "Unknown option after command: $1" >&2
+            exit 1
+          fi
+          if [ "${#positionals[@]}" -lt 1 ]; then
+            echo "Usage: please show POD [CONTAINER] [--all]" >&2
+            exit 1
+          fi
+          all_logs=true
+          shift
+          ;;
+        --)
+          shift
+          while [ $# -gt 0 ]; do
+            positionals+=("$1")
+            shift
+          done
+          ;;
+        -*)
+          echo "Unknown option after command: $1" >&2
+          echo "Put kubectl flags before the command, for example: please -n namespace $command POD" >&2
+          exit 1
+          ;;
+        *)
+          if [ "$all_logs" = true ]; then
+            echo "Usage: please show POD [CONTAINER] [--all]" >&2
+            exit 1
+          fi
+          positionals+=("$1")
+          shift
+          ;;
+      esac
+    done
+
+    if [ "${#positionals[@]}" -lt 1 ] || [ "${#positionals[@]}" -gt 2 ]; then
+      if [ "$command" = "show" ]; then
+        echo "Usage: please show POD [CONTAINER] [--all]" >&2
+      else
+        echo "Usage: please follow POD [CONTAINER]" >&2
+      fi
+      exit 1
+    fi
+
+    pod="${positionals[0]}"
+    container="${positionals[1]:-}"
+    log_args=(logs)
+
+    if [ "$command" = "follow" ]; then
+      log_args+=(-f)
+    elif [ "$all_logs" != true ]; then
+      log_args+=(--tail=200)
+    fi
+
+    log_args+=("$pod")
+
+    if [ -n "$container" ]; then
+      log_args+=(-c "$container")
+    fi
+
+    k "${log_args[@]}" | pretty_logs
     ;;
   invade)
     parse_args "$@"

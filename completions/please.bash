@@ -89,12 +89,15 @@ _please_completion() {
     if [[ "$cur" == -* ]]; then
       COMPREPLY=($(compgen -W "-n --namespace --context --kubeconfig -h --help" -- "$cur"))
     else
-      COMPREPLY=($(compgen -W "stop nope restart why sherlock invade help --help -h" -- "$cur"))
+      COMPREPLY=($(compgen -W "stop nope restart why sherlock invade show follow help --help -h" -- "$cur"))
     fi
     return 0
   fi
 
   if [[ "$cur" == -* ]]; then
+    if [ "$command" = "show" ]; then
+      COMPREPLY=($(compgen -W "--all" -- "$cur"))
+    fi
     return 0
   fi
 
@@ -103,6 +106,13 @@ _please_completion() {
     case "${COMP_WORDS[$i]}" in
       --)
         i=$((i + 1))
+        ;;
+      --all)
+        if [ "$command" = "show" ]; then
+          i=$((i + 1))
+        else
+          return 0
+        fi
         ;;
       -*)
         return 0
@@ -134,11 +144,20 @@ _please_completion() {
         COMPREPLY=($(compgen -W "$(_fk_resource_names "${positionals[0]}" "${kubectl_args[@]}")" -- "$cur"))
       fi
       ;;
-    invade)
+    invade|follow)
       if [ "$relative" -eq 1 ]; then
         COMPREPLY=($(compgen -W "$(_fk_pods "${kubectl_args[@]}")" -- "$cur"))
       elif [ "$relative" -eq 2 ]; then
         COMPREPLY=($(compgen -W "$(_fk_containers "${positionals[0]}" "${kubectl_args[@]}")" -- "$cur"))
+      fi
+      ;;
+    show)
+      if [ "$relative" -eq 1 ]; then
+        COMPREPLY=($(compgen -W "$(_fk_pods "${kubectl_args[@]}")" -- "$cur"))
+      elif [ "$relative" -eq 2 ]; then
+        COMPREPLY=($(compgen -W "$(_fk_containers "${positionals[0]}" "${kubectl_args[@]}") --all" -- "$cur"))
+      elif [ "$relative" -eq 3 ]; then
+        COMPREPLY=($(compgen -W "--all" -- "$cur"))
       fi
       ;;
   esac

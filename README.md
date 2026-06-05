@@ -11,6 +11,32 @@ fucking die api-7d9f8b6c9d-j2k4m
 
 Both commands use your active `kubectl` context and namespace. No namespace flags are added for you.
 
+## Why
+
+The joke gets you in the door; the useful part is less typing for the Kubernetes commands you run all day.
+
+- pod and container completion for log and shell commands
+- readable log output for JSON and common plaintext log formats
+- normal deletes through `please`, forced deletes through `fucking`
+- explicit namespace/context flags when you need them
+
+For example:
+
+```sh
+please follow api-7d9f8b6c9d-j2k4m app
+# kubectl logs -f api-7d9f8b6c9d-j2k4m -c app
+```
+
+`please show` and `please follow` keep normal plaintext logs readable, but make structured logs much easier to scan:
+
+- timestamps are dimmed
+- log levels are colored by severity
+- logger names are highlighted
+- stack traces and unparsed continuation lines get a subtle muted tint
+- existing ANSI colors in log messages are preserved
+
+If `jq` is not installed, logs pass through unchanged.
+
 ## Commands
 
 ### `please`
@@ -79,6 +105,36 @@ kubectl [KUBECTL_FLAGS] exec -it POD [-c CONTAINER] -- sh
 ```
 
 It uses the first shell found in the pod.
+
+```sh
+please [KUBECTL_FLAGS] show POD [CONTAINER] [--all]
+```
+
+Show recent pod logs. JSON log lines get readable field formatting; plaintext log lines pass through unchanged.
+
+Equivalent:
+
+```sh
+kubectl [KUBECTL_FLAGS] logs --tail=200 POD [-c CONTAINER]
+```
+
+With `--all`:
+
+```sh
+kubectl [KUBECTL_FLAGS] logs POD [-c CONTAINER]
+```
+
+```sh
+please [KUBECTL_FLAGS] follow POD [CONTAINER]
+```
+
+Follow pod logs with the same log formatting behavior.
+
+Equivalent:
+
+```sh
+kubectl [KUBECTL_FLAGS] logs -f POD [-c CONTAINER]
+```
 
 ### `fucking`
 
@@ -149,7 +205,8 @@ They complete:
 - pods in the current namespace
 - dynamic deletable resource types from `kubectl api-resources --verbs=delete --namespaced=true -o name`
 - resource names for `please nope` and `fucking nope`
-- container names for `please invade POD CONTAINER`
+- container names for `please invade POD CONTAINER`, `please show POD CONTAINER`, and `please follow POD CONTAINER`
+- `--all` for `please show POD [CONTAINER] --all`
 
 Zsh completion does not require oh-my-zsh. It only needs zsh completion via `compinit`.
 
@@ -257,6 +314,15 @@ please invade api-7d9f8b6c9d-j2k4m app
 # kubectl exec -it api-7d9f8b6c9d-j2k4m -c app -- zsh
 # or bash, then sh, depending on what exists in the container
 
+please show api-7d9f8b6c9d-j2k4m app
+# kubectl logs --tail=200 api-7d9f8b6c9d-j2k4m -c app
+
+please follow api-7d9f8b6c9d-j2k4m app
+# kubectl logs -f api-7d9f8b6c9d-j2k4m -c app
+
+please show api-7d9f8b6c9d-j2k4m app --all
+# kubectl logs api-7d9f8b6c9d-j2k4m -c app
+
 please nope deployments.apps api
 # kubectl delete deployments.apps api
 
@@ -267,6 +333,7 @@ fucking nope jobs.batch import-123
 ## Requirements
 
 - `kubectl`
+- `jq` for readable log formatting in `please show`, `please follow`, and `please why`; without it, logs pass through unchanged
 - `zsh` or Bash for completions
 - `bash-completion` for Bash completions
 - enough Kubernetes permissions for whatever you ask the commands to do
