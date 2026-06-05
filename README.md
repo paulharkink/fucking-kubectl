@@ -54,17 +54,35 @@ please [KUBECTL_FLAGS] stop POD
 
 Delete a pod normally.
 
+Equivalent:
+
+```sh
+kubectl [KUBECTL_FLAGS] delete pod POD
+```
+
 ```sh
 please [KUBECTL_FLAGS] nope TYPE NAME
 ```
 
 Delete any namespaced resource normally.
 
+Equivalent:
+
+```sh
+kubectl [KUBECTL_FLAGS] delete TYPE NAME
+```
+
 ```sh
 please [KUBECTL_FLAGS] restart DEPLOYMENT
 ```
 
 Run a deployment rollout restart.
+
+Equivalent:
+
+```sh
+kubectl [KUBECTL_FLAGS] rollout restart deployment DEPLOYMENT
+```
 
 ```sh
 please [KUBECTL_FLAGS] why POD
@@ -85,6 +103,16 @@ please [KUBECTL_FLAGS] invade POD [CONTAINER]
 
 Open an interactive shell in a pod. It tries `zsh`, then `bash`, then `sh`.
 
+Equivalent:
+
+```sh
+kubectl [KUBECTL_FLAGS] exec -it POD [-c CONTAINER] -- zsh
+kubectl [KUBECTL_FLAGS] exec -it POD [-c CONTAINER] -- bash
+kubectl [KUBECTL_FLAGS] exec -it POD [-c CONTAINER] -- sh
+```
+
+It uses the first shell found in the pod.
+
 ### `fucking`
 
 ```sh
@@ -93,11 +121,23 @@ fucking [KUBECTL_FLAGS] die POD
 
 Force-delete a pod immediately.
 
+Equivalent:
+
+```sh
+kubectl [KUBECTL_FLAGS] delete pod POD --grace-period=0 --force
+```
+
 ```sh
 fucking [KUBECTL_FLAGS] nope TYPE NAME
 ```
 
 Force-delete any namespaced resource immediately.
+
+Equivalent:
+
+```sh
+kubectl [KUBECTL_FLAGS] delete TYPE NAME --grace-period=0 --force
+```
 
 ## Completion
 
@@ -206,10 +246,22 @@ The plugin file adds `bin/` to `PATH` and `completions/` to `fpath`.
 
 ```sh
 please restart api
+# kubectl rollout restart deployment api
+
 please why api-7d9f8b6c9d-j2k4m
+# kubectl get pod api-7d9f8b6c9d-j2k4m -o wide
+# kubectl get events --field-selector involvedObject.name=api-7d9f8b6c9d-j2k4m --sort-by=.lastTimestamp
+# kubectl logs api-7d9f8b6c9d-j2k4m --previous --tail=200
+
 please invade api-7d9f8b6c9d-j2k4m app
+# kubectl exec -it api-7d9f8b6c9d-j2k4m -c app -- zsh
+# or bash, then sh, depending on what exists in the container
+
 please nope deployments.apps api
+# kubectl delete deployments.apps api
+
 fucking nope jobs.batch import-123
+# kubectl delete jobs.batch import-123 --grace-period=0 --force
 ```
 
 ## Requirements
