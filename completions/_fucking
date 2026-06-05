@@ -1,41 +1,133 @@
 #compdef fucking
 
-local curcontext="$curcontext" state
-typeset -A opt_args
+local -a kubectl_args command_specs global_options positionals
+local command="" command_index=$CURRENT arg_position
 
-_arguments -C \
-  '(-h --help)'{-h,--help}'[show help]' \
-  '1:command:->commands' \
-  '2:resource type or pod:->resource_or_pod' \
-  '3:resource name:->resource_names' \
-  '*:: :->rest'
+command_specs=(
+  'die:force-delete a pod in the current Kubernetes namespace immediately'
+  'nope:force-delete a resource in the current Kubernetes namespace immediately'
+  'help:show help'
+)
 
-case $state in
-  commands)
-    local -a commands
-    commands=(
-      'die:force-delete a pod in the current Kubernetes namespace immediately'
-      'nope:force-delete a resource in the current Kubernetes namespace immediately'
-      'help:show help'
-    )
-    _describe 'commands' commands
-    ;;
-  resource_or_pod)
-    if [[ "${words[2]}" == "die" ]]; then
+global_options=(
+  '-n[use a namespace]'
+  '--namespace[use a namespace]'
+  '--context[use a kubeconfig context]'
+  '--kubeconfig[use a kubeconfig file]'
+  '-h[show help]'
+  '--help[show help]'
+)
+
+local i=2
+while (( i < CURRENT )); do
+  case "${words[i]}" in
+    -n|--namespace|--context|--kubeconfig)
+      if (( i + 1 < CURRENT )); then
+        kubectl_args+=("${words[i]}" "${words[$(( i + 1 ))]}")
+        (( i += 2 ))
+      else
+        break
+      fi
+      ;;
+    --namespace=*|--context=*|--kubeconfig=*)
+      kubectl_args+=("${words[i]}")
+      (( i++ ))
+      ;;
+    --)
+      (( i++ ))
+      break
+      ;;
+    -*)
+      (( i++ ))
+      ;;
+    *)
+      command="${words[i]}"
+      command_index=$i
+      break
+      ;;
+  esac
+done
+
+if [[ "${words[CURRENT-1]}" == "-n" || "${words[CURRENT-1]}" == "--namespace" ]]; then
+  local -a namespaces
+  namespaces=(${(f)"$(kubectl "${kubectl_args[@]}" get namespaces --no-headers -o custom-columns=:metadata.name 2>/dev/null)"})
+  compadd -a namespaces
+  return 0
+fi
+
+if [[ "${words[CURRENT-1]}" == "--context" ]]; then
+  local -a contexts
+  contexts=(${(f)"$(kubectl config get-contexts -o name 2>/dev/null)"})
+  compadd -a contexts
+  return 0
+fi
+
+if [[ "${words[CURRENT-1]}" == "--kubeconfig" ]]; then
+  _files
+  return 0
+fi
+
+if [[ -z "$command" || $CURRENT -eq $command_index ]]; then
+  if [[ "${words[CURRENT]}" == -* ]]; then
+    _describe 'options' global_options
+  else
+    _describe 'commands' command_specs
+  fi
+  return 0
+fi
+
+if [[ "${words[CURRENT]}" == -* ]]; then
+  _describe 'options' global_options
+  return 0
+fi
+
+i=$(( command_index + 1 ))
+while (( i < CURRENT )); do
+  case "${words[i]}" in
+    -n|--namespace|--context|--kubeconfig)
+      if (( i + 1 < CURRENT )); then
+        kubectl_args+=("${words[i]}" "${words[$(( i + 1 ))]}")
+        (( i += 2 ))
+      else
+        break
+      fi
+      ;;
+    --namespace=*|--context=*|--kubeconfig=*)
+      kubectl_args+=("${words[i]}")
+      (( i++ ))
+      ;;
+    --)
+      (( i++ ))
+      ;;
+    -*)
+      (( i++ ))
+      ;;
+    *)
+      positionals+=("${words[i]}")
+      (( i++ ))
+      ;;
+  esac
+done
+
+arg_position=$(( ${#positionals[@]} + 1 ))
+
+case "$command" in
+  die)
+    if (( arg_position == 1 )); then
       local -a pods
-      pods=(${(f)"$(kubectl get pods --no-headers -o custom-columns=:metadata.name 2>/dev/null)"})
-      _describe 'pods' pods
-    elif [[ "${words[2]}" == "nope" ]]; then
-      local -a resource_types
-      resource_types=(${(f)"$(kubectl api-resources --verbs=delete --namespaced=true -o name 2>/dev/null)"})
-      _describe 'resource types' resource_types
+      pods=(${(f)"$(kubectl "${kubectl_args[@]}" get pods --no-headers -o custom-columns=:metadata.name 2>/dev/null)"})
+      compadd -a pods
     fi
     ;;
-  resource_names)
-    if [[ "${words[2]}" == "nope" && -n "${words[3]}" ]]; then
+  nope)
+    if (( arg_position == 1 )); then
+      local -a resource_types
+      resource_types=(${(f)"$(kubectl "${kubectl_args[@]}" api-resources --verbs=delete --namespaced=true -o name 2>/dev/null)"})
+      compadd -a resource_types
+    elif (( arg_position == 2 )); then
       local -a resources
-      resources=(${(f)"$(kubectl get "${words[3]}" --no-headers -o custom-columns=:metadata.name 2>/dev/null)"})
-      _describe "${words[3]}" resources
+      resources=(${(f)"$(kubectl "${kubectl_args[@]}" get "${positionals[1]}" --no-headers -o custom-columns=:metadata.name 2>/dev/null)"})
+      compadd -a resources
     fi
     ;;
 esac

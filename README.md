@@ -11,31 +11,39 @@ fucking die api-7d9f8b6c9d-j2k4m
 
 Both commands use your active `kubectl` context and namespace. No namespace flags are added for you.
 
+You can pass common kubectl selection flags before or after the command:
+
+```sh
+please -n hermes stop api-7d9f8b6c9d-j2k4m
+please stop -n hermes api-7d9f8b6c9d-j2k4m
+fucking --context prod die api-7d9f8b6c9d-j2k4m
+```
+
 ## Commands
 
 ### `please`
 
 ```sh
-please stop POD
+please [KUBECTL_FLAGS] stop POD
 ```
 
 Delete a pod normally.
 
 ```sh
-please nope TYPE NAME
+please [KUBECTL_FLAGS] nope TYPE NAME
 ```
 
 Delete any namespaced resource normally.
 
 ```sh
-please restart DEPLOYMENT
+please [KUBECTL_FLAGS] restart DEPLOYMENT
 ```
 
 Run a deployment rollout restart.
 
 ```sh
-please why POD
-please sherlock POD
+please [KUBECTL_FLAGS] why POD
+please [KUBECTL_FLAGS] sherlock POD
 ```
 
 Show a focused pod diagnosis:
@@ -47,7 +55,7 @@ kubectl logs POD --previous --tail=200
 ```
 
 ```sh
-please invade POD [CONTAINER]
+please [KUBECTL_FLAGS] invade POD [CONTAINER]
 ```
 
 Open an interactive shell in a pod. It tries `zsh`, then `bash`, then `sh`.
@@ -55,13 +63,13 @@ Open an interactive shell in a pod. It tries `zsh`, then `bash`, then `sh`.
 ### `fucking`
 
 ```sh
-fucking die POD
+fucking [KUBECTL_FLAGS] die POD
 ```
 
 Force-delete a pod immediately.
 
 ```sh
-fucking nope TYPE NAME
+fucking [KUBECTL_FLAGS] nope TYPE NAME
 ```
 
 Force-delete any namespaced resource immediately.

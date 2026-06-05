@@ -6,6 +6,7 @@ usage() {
 please: polite Kubernetes shortcuts for the current namespace.
 
 Usage:
+  please [KUBECTL_FLAGS] COMMAND ...
   please stop POD
   please nope TYPE NAME
   please restart DEPLOYMENT
@@ -15,6 +16,11 @@ Usage:
 
 Options:
   -h, --help  Show this help.
+
+Kubectl flags:
+  -n, --namespace NAME  Use a namespace for this command.
+      --context NAME    Use a kubeconfig context for this command.
+      --kubeconfig PATH Use a kubeconfig file for this command.
 
 Commands:
   stop     Delete a pod normally.
@@ -55,6 +61,39 @@ if [ $# -lt 1 ]; then
   exit 1
 fi
 
+kubectl_args=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -n|--namespace|--context|--kubeconfig)
+      if [ $# -lt 2 ]; then
+        echo "Missing value for $1" >&2
+        exit 1
+      fi
+      kubectl_args+=("$1" "$2")
+      shift 2
+      ;;
+    --namespace=*|--context=*|--kubeconfig=*)
+      kubectl_args+=("$1")
+      shift
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      break
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+if [ $# -lt 1 ]; then
+  usage
+  exit 1
+fi
+
 command="$1"
 shift
 
@@ -62,79 +101,113 @@ section() {
   printf '\n== %s ==\n' "$1"
 }
 
+k() {
+  if [ "${#kubectl_args[@]}" -gt 0 ]; then
+    kubectl "${kubectl_args[@]}" "$@"
+  else
+    kubectl "$@"
+  fi
+}
+
+parse_args() {
+  positionals=()
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -n|--namespace|--context|--kubeconfig)
+        if [ $# -lt 2 ]; then
+          echo "Missing value for $1" >&2
+          exit 1
+        fi
+        kubectl_args+=("$1" "$2")
+        shift 2
+        ;;
+      --namespace=*|--context=*|--kubeconfig=*)
+        kubectl_args+=("$1")
+        shift
+        ;;
+      --)
+        shift
+        while [ $# -gt 0 ]; do
+          positionals+=("$1")
+          shift
+        done
+        ;;
+      -*)
+        echo "Unknown option: $1" >&2
+        exit 1
+        ;;
+      *)
+        positionals+=("$1")
+        shift
+        ;;
+    esac
+  done
+}
+
 case "$command" in
   stop|die)
-    if [ $# -ne 1 ]; then
+    parse_args "$@"
+    if [ "${#positionals[@]}" -ne 1 ]; then
       echo "Usage: please stop POD" >&2
       exit 1
     fi
 
-    kubectl delete pod "$1"
+    k delete pod "${positionals[0]}"
     ;;
   nope)
-    if [ $# -ne 2 ]; then
+    parse_args "$@"
+    if [ "${#positionals[@]}" -ne 2 ]; then
       echo "Usage: please nope TYPE NAME" >&2
       exit 1
     fi
 
-    kubectl delete "$1" "$2"
+    k delete "${positionals[0]}" "${positionals[1]}"
     ;;
   restart)
-    if [ $# -ne 1 ]; then
+    parse_args "$@"
+    if [ "${#positionals[@]}" -ne 1 ]; then
       echo "Usage: please restart DEPLOYMENT" >&2
       exit 1
     fi
 
-    kubectl rollout restart deployment "$1"
+    k rollout restart deployment "${positionals[0]}"
     ;;
   why|sherlock)
-    if [ $# -ne 1 ]; then
+    parse_args "$@"
+    if [ "${#positionals[@]}" -ne 1 ]; then
       echo "Usage: please why POD" >&2
       exit 1
     fi
 
-    pod="$1"
+    pod="${positionals[0]}"
 
     section "Pod"
-    kubectl get pod "$pod" -o wide
+    k get pod "$pod" -o wide
 
     section "Events"
-    kubectl get events --field-selector "involvedObject.name=$pod" --sort-by=.lastTimestamp
+    k get events --field-selector "involvedObject.name=$pod" --sort-by=.lastTimestamp
 
     section "Previous Logs"
-    kubectl logs "$pod" --previous --tail=200
+    k logs "$pod" --previous --tail=200
     ;;
   invade)
-    container=""
-    pod=""
-
-    while [ $# -gt 0 ]; do
-      case "$1" in
-        -*)
-          echo "Usage: please invade POD [CONTAINER]" >&2
-          exit 1
-          ;;
-        *)
-          if [ -z "$pod" ]; then
-            pod="$1"
-          elif [ -z "$container" ]; then
-            container="$1"
-          else
-            echo "Usage: please invade POD [CONTAINER]" >&2
-            exit 1
-          fi
-          shift
-          ;;
-      esac
-    done
-
-    if [ -z "$pod" ]; then
+    parse_args "$@"
+    if [ "${#positionals[@]}" -lt 1 ] || [ "${#positionals[@]}" -gt 2 ]; then
       echo "Usage: please invade POD [CONTAINER]" >&2
       exit 1
     fi
 
+    pod="${positionals[0]}"
+    container="${positionals[1]:-}"
+
     probe_args=(exec "$pod")
     interactive_args=(exec -it "$pod")
+
+    if [ "${#kubectl_args[@]}" -gt 0 ]; then
+      probe_args=("${kubectl_args[@]}" "${probe_args[@]}")
+      interactive_args=("${kubectl_args[@]}" "${interactive_args[@]}")
+    fi
 
     if [ -n "$container" ]; then
       probe_args+=(-c "$container")

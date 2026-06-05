@@ -6,11 +6,17 @@ usage() {
 fucking: escalated Kubernetes deletes for the current namespace.
 
 Usage:
+  fucking [KUBECTL_FLAGS] COMMAND ...
   fucking die POD
   fucking nope TYPE NAME
 
 Options:
   -h, --help  Show this help.
+
+Kubectl flags:
+  -n, --namespace NAME  Use a namespace for this command.
+      --context NAME    Use a kubeconfig context for this command.
+      --kubeconfig PATH Use a kubeconfig file for this command.
 
 Commands:
   die   Force-delete a pod immediately.
@@ -36,25 +42,104 @@ if [ $# -lt 1 ]; then
   exit 1
 fi
 
+kubectl_args=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -n|--namespace|--context|--kubeconfig)
+      if [ $# -lt 2 ]; then
+        echo "Missing value for $1" >&2
+        exit 1
+      fi
+      kubectl_args+=("$1" "$2")
+      shift 2
+      ;;
+    --namespace=*|--context=*|--kubeconfig=*)
+      kubectl_args+=("$1")
+      shift
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      break
+      ;;
+    *)
+      break
+      ;;
+  esac
+done
+
+if [ $# -lt 1 ]; then
+  usage
+  exit 1
+fi
+
 command="$1"
 shift
 
+k() {
+  if [ "${#kubectl_args[@]}" -gt 0 ]; then
+    kubectl "${kubectl_args[@]}" "$@"
+  else
+    kubectl "$@"
+  fi
+}
+
+parse_args() {
+  positionals=()
+
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      -n|--namespace|--context|--kubeconfig)
+        if [ $# -lt 2 ]; then
+          echo "Missing value for $1" >&2
+          exit 1
+        fi
+        kubectl_args+=("$1" "$2")
+        shift 2
+        ;;
+      --namespace=*|--context=*|--kubeconfig=*)
+        kubectl_args+=("$1")
+        shift
+        ;;
+      --)
+        shift
+        while [ $# -gt 0 ]; do
+          positionals+=("$1")
+          shift
+        done
+        ;;
+      -*)
+        echo "Unknown option: $1" >&2
+        exit 1
+        ;;
+      *)
+        positionals+=("$1")
+        shift
+        ;;
+    esac
+  done
+}
+
 case "$command" in
   die)
-    if [ $# -ne 1 ]; then
+    parse_args "$@"
+    if [ "${#positionals[@]}" -ne 1 ]; then
       echo "Usage: fucking die POD" >&2
       exit 1
     fi
 
-    kubectl delete pod "$1" --grace-period=0 --force
+    k delete pod "${positionals[0]}" --grace-period=0 --force
     ;;
   nope)
-    if [ $# -ne 2 ]; then
+    parse_args "$@"
+    if [ "${#positionals[@]}" -ne 2 ]; then
       echo "Usage: fucking nope TYPE NAME" >&2
       exit 1
     fi
 
-    kubectl delete "$1" "$2" --grace-period=0 --force
+    k delete "${positionals[0]}" "${positionals[1]}" --grace-period=0 --force
     ;;
   -h|--help|help)
     usage
