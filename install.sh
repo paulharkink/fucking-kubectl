@@ -3,17 +3,12 @@ set -eu
 
 repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
 prefix=${PREFIX:-"$HOME/.local"}
-zsh_completion_dir=${ZSH_COMPLETION_DIR:-"$HOME/.zsh/completions"}
-bash_completion_dir=${BASH_COMPLETION_DIR:-"$HOME/.local/share/bash-completion/completions"}
 
-mkdir -p "$prefix/bin" "$zsh_completion_dir" "$bash_completion_dir"
+mkdir -p "$prefix/bin"
 
 ln -sf "$repo_dir/bin/please" "$prefix/bin/please"
 ln -sf "$repo_dir/bin/fucking" "$prefix/bin/fucking"
-ln -sf "$repo_dir/completions/_please" "$zsh_completion_dir/_please"
-ln -sf "$repo_dir/completions/_fucking" "$zsh_completion_dir/_fucking"
-ln -sf "$repo_dir/completions/please.bash" "$bash_completion_dir/please"
-ln -sf "$repo_dir/completions/fucking.bash" "$bash_completion_dir/fucking"
+ln -sf "$repo_dir/bin/fucking-kubectl" "$prefix/bin/fucking-kubectl"
 
 cat <<EOF
 Installed fucking-kubectl.
@@ -21,19 +16,17 @@ Installed fucking-kubectl.
 Commands:
   $prefix/bin/please
   $prefix/bin/fucking
+  $prefix/bin/fucking-kubectl
 
-Zsh completions:
-  $zsh_completion_dir/_please
-  $zsh_completion_dir/_fucking
+To install zsh completions:
 
-Bash completions:
-  $bash_completion_dir/please
-  $bash_completion_dir/fucking
+  mkdir -p "\$HOME/.zsh/completions"
+  "$prefix/bin/fucking-kubectl" completion zsh please > "\$HOME/.zsh/completions/_please"
+  "$prefix/bin/fucking-kubectl" completion zsh fucking > "\$HOME/.zsh/completions/_fucking"
 
-Add this to ~/.zshrc if needed:
+Then make sure ~/.zshrc contains:
 
-  export PATH="$prefix/bin:\$PATH"
-  fpath=("$zsh_completion_dir" \$fpath)
+  fpath=("\$HOME/.zsh/completions" \$fpath)
   autoload -Uz compinit
   compinit
 
@@ -41,6 +34,11 @@ For oh-my-zsh, put the fpath line before:
 
   source \$ZSH/oh-my-zsh.sh
 
-For Bash, install bash-completion and source it from ~/.bashrc if your distro
-does not already do so.
+To install Bash completions with bash-completion:
+
+  mkdir -p "\$HOME/.local/share/bash-completion/completions"
+  "$prefix/bin/fucking-kubectl" completion bash > "\$HOME/.local/share/bash-completion/completions/please"
+  "$prefix/bin/fucking-kubectl" completion bash > "\$HOME/.local/share/bash-completion/completions/fucking"
+
+Make sure $prefix/bin is on your PATH.
 EOF

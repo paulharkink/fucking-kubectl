@@ -97,16 +97,28 @@ The installer symlinks:
 ```text
 ~/.local/bin/please
 ~/.local/bin/fucking
-~/.zsh/completions/_please
-~/.zsh/completions/_fucking
-~/.local/share/bash-completion/completions/please
-~/.local/share/bash-completion/completions/fucking
+~/.local/bin/fucking-kubectl
 ```
+
+Make sure `~/.local/bin` is on your `PATH`.
+
+It does not install shell completions automatically.
+
+### Zsh completion
+
+Install the completion files:
+
+```sh
+mkdir -p "$HOME/.zsh/completions"
+fucking-kubectl completion zsh please > "$HOME/.zsh/completions/_please"
+fucking-kubectl completion zsh fucking > "$HOME/.zsh/completions/_fucking"
+```
+
+If `fucking-kubectl` is not on your `PATH` yet, use `~/.local/bin/fucking-kubectl`.
 
 Add this to `~/.zshrc` if you do not already have a zsh completion setup:
 
 ```sh
-export PATH="$HOME/.local/bin:$PATH"
 fpath=("$HOME/.zsh/completions" $fpath)
 autoload -Uz compinit
 compinit
@@ -116,6 +128,16 @@ For oh-my-zsh users, put the `fpath` line before:
 
 ```sh
 source $ZSH/oh-my-zsh.sh
+```
+
+### Bash completion
+
+Install the completion files:
+
+```sh
+mkdir -p "$HOME/.local/share/bash-completion/completions"
+fucking-kubectl completion bash > "$HOME/.local/share/bash-completion/completions/please"
+fucking-kubectl completion bash > "$HOME/.local/share/bash-completion/completions/fucking"
 ```
 
 For Bash users, make sure `bash-completion` is installed and sourced. Many Linux distributions do this automatically. If not, add the appropriate line for your system to `~/.bashrc`, for example:

@@ -1,0 +1,93 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+resolve_script() {
+  local source="$1"
+  local dir
+
+  while [ -L "$source" ]; do
+    dir=$(CDPATH= cd -- "$(dirname -- "$source")" && pwd -P)
+    source=$(readlink "$source")
+    case "$source" in
+      /*) ;;
+      *) source="$dir/$source" ;;
+    esac
+  done
+
+  dir=$(CDPATH= cd -- "$(dirname -- "$source")" && pwd -P)
+  printf '%s\n' "$dir"
+}
+
+bin_dir=$(resolve_script "${BASH_SOURCE[0]}")
+repo_dir=$(CDPATH= cd -- "$bin_dir/.." && pwd -P)
+
+usage() {
+  cat >&2 <<'EOF'
+Usage:
+  fucking-kubectl completion bash
+  fucking-kubectl completion zsh please
+  fucking-kubectl completion zsh fucking
+
+Commands:
+  completion  Print shell completion scripts.
+EOF
+}
+
+if [ $# -lt 1 ]; then
+  usage
+  exit 1
+fi
+
+command="$1"
+shift
+
+case "$command" in
+  completion)
+    if [ $# -lt 1 ]; then
+      usage
+      exit 1
+    fi
+
+    shell="$1"
+    shift
+
+    case "$shell" in
+      bash)
+        if [ $# -ne 0 ]; then
+          echo "Usage: fucking-kubectl completion bash" >&2
+          exit 1
+        fi
+
+        cat "$repo_dir/completions/please.bash" "$repo_dir/completions/fucking.bash"
+        ;;
+      zsh)
+        if [ $# -ne 1 ]; then
+          echo "Usage: fucking-kubectl completion zsh please|fucking" >&2
+          exit 1
+        fi
+
+        case "$1" in
+          please) cat "$repo_dir/completions/_please" ;;
+          fucking) cat "$repo_dir/completions/_fucking" ;;
+          *)
+            echo "Unknown zsh completion target: $1" >&2
+            exit 1
+            ;;
+        esac
+        ;;
+      *)
+        echo "Unknown shell: $shell" >&2
+        usage
+        exit 1
+        ;;
+    esac
+    ;;
+  -h|--help|help)
+    usage
+    ;;
+  *)
+    echo "Unknown command: $command" >&2
+    usage
+    exit 1
+    ;;
+esac
