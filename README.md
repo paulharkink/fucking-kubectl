@@ -68,7 +68,7 @@ Force-delete any namespaced resource immediately.
 
 ## Completion
 
-Zsh completions are included for both commands.
+Zsh and Bash completions are included for both commands.
 
 They complete:
 
@@ -78,7 +78,9 @@ They complete:
 - resource names for `please nope` and `fucking nope`
 - container names for `please invade POD CONTAINER`
 
-Completion does not require oh-my-zsh. It only needs zsh completion via `compinit`.
+Zsh completion does not require oh-my-zsh. It only needs zsh completion via `compinit`.
+
+Bash completion uses the standard `bash-completion` mechanism.
 
 ## Install
 
@@ -97,6 +99,8 @@ The installer symlinks:
 ~/.local/bin/fucking
 ~/.zsh/completions/_please
 ~/.zsh/completions/_fucking
+~/.local/share/bash-completion/completions/please
+~/.local/share/bash-completion/completions/fucking
 ```
 
 Add this to `~/.zshrc` if you do not already have a zsh completion setup:
@@ -112,6 +116,18 @@ For oh-my-zsh users, put the `fpath` line before:
 
 ```sh
 source $ZSH/oh-my-zsh.sh
+```
+
+For Bash users, make sure `bash-completion` is installed and sourced. Many Linux distributions do this automatically. If not, add the appropriate line for your system to `~/.bashrc`, for example:
+
+```sh
+[ -f /usr/share/bash-completion/bash_completion ] && . /usr/share/bash-completion/bash_completion
+```
+
+On Homebrew:
+
+```sh
+[[ -r "$(brew --prefix)/etc/profile.d/bash_completion.sh" ]] && . "$(brew --prefix)/etc/profile.d/bash_completion.sh"
 ```
 
 ## oh-my-zsh plugin style
@@ -144,7 +160,8 @@ fucking nope jobs.batch import-123
 ## Requirements
 
 - `kubectl`
-- `zsh` for completions
+- `zsh` or Bash for completions
+- `bash-completion` for Bash completions
 - enough Kubernetes permissions for whatever you ask the commands to do
 
 The commands themselves are small Bash scripts.
