@@ -78,7 +78,7 @@ spec:
       when:
         - input: "$(params.mode)"
           operator: in
-          values: ["branch", "main"]
+          values: ["branch", "main", "pr"]
       runAfter: ["clone-source"]
       taskSpec:
         workspaces:

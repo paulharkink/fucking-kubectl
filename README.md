@@ -351,3 +351,5 @@ tests/pretty-logs.sh
 bash -n bin/please completions/please.bash
 zsh -n completions/_please
 ```
+
+Tekton Pipelines as Code runs the same checks on pull requests, non-main branch pushes, and main pushes.
