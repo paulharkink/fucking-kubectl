@@ -75,7 +75,7 @@ fi
 kubectl_args=()
 while [ $# -gt 0 ]; do
   case "$1" in
-    -n|--namespace|--context|--kubeconfig)
+    -n | --namespace | --context | --kubeconfig)
       if [ $# -lt 2 ]; then
         echo "Missing value for $1" >&2
         exit 1
@@ -83,7 +83,7 @@ while [ $# -gt 0 ]; do
       kubectl_args+=("$1" "$2")
       shift 2
       ;;
-    --namespace=*|--context=*|--kubeconfig=*)
+    --namespace=* | --context=* | --kubeconfig=*)
       kubectl_args+=("$1")
       shift
       ;;
@@ -289,7 +289,7 @@ parse_args() {
 }
 
 case "$command" in
-  stop|die)
+  stop | die)
     parse_args "$@"
     if [ "${#positionals[@]}" -ne 1 ]; then
       echo "Usage: please stop POD" >&2
@@ -316,7 +316,7 @@ case "$command" in
 
     k rollout restart deployment "${positionals[0]}"
     ;;
-  why|sherlock)
+  why | sherlock)
     parse_args "$@"
     if [ "${#positionals[@]}" -ne 1 ]; then
       echo "Usage: please why POD" >&2
@@ -337,7 +337,7 @@ case "$command" in
   pretty)
     pretty_logs "$@"
     ;;
-  show|follow)
+  show | follow)
     positionals=()
     all_logs=false
 
@@ -438,7 +438,7 @@ case "$command" in
 
     kubectl "${interactive_args[@]}" -- "$shell"
     ;;
-  -h|--help|help)
+  -h | --help | help)
     usage
     ;;
   *)

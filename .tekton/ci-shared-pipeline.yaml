@@ -95,11 +95,9 @@ spec:
                 memory: 512Mi
             script: |
               set -eux
-              apk add --no-cache bash jq zsh >/dev/null
+              apk add --no-cache bash jq zsh shellcheck >/dev/null
               cd "$(workspaces.source.path)/src"
-              tests/pretty-logs.sh
-              bash -n bin/please bin/fucking bin/fucking-kubectl completions/please.bash completions/fucking.bash
-              zsh -n completions/_please completions/_fucking
+              ./test.sh
       workspaces:
         - name: source
           workspace: source

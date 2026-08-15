@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-repo_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd -P)
+repo_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd -P)
 prefix=${PREFIX:-"$HOME/.local"}
 
 mkdir -p "$prefix/bin"
@@ -17,6 +17,8 @@ Commands:
   $prefix/bin/please
   $prefix/bin/fucking
   $prefix/bin/fucking-kubectl
+
+It does not install shell completions automatically.
 
 To install zsh completions:
 

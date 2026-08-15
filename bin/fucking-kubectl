@@ -6,7 +6,7 @@ resolve_script() {
   local dir
 
   while [ -L "$source" ]; do
-    dir=$(CDPATH= cd -- "$(dirname -- "$source")" && pwd -P)
+    dir=$(CDPATH='' cd -- "$(dirname -- "$source")" && pwd -P)
     source=$(readlink "$source")
     case "$source" in
       /*) ;;
@@ -14,12 +14,12 @@ resolve_script() {
     esac
   done
 
-  dir=$(CDPATH= cd -- "$(dirname -- "$source")" && pwd -P)
+  dir=$(CDPATH='' cd -- "$(dirname -- "$source")" && pwd -P)
   printf '%s\n' "$dir"
 }
 
 bin_dir=$(resolve_script "${BASH_SOURCE[0]}")
-repo_dir=$(CDPATH= cd -- "$bin_dir/.." && pwd -P)
+repo_dir=$(CDPATH='' cd -- "$bin_dir/.." && pwd -P)
 
 usage() {
   cat >&2 <<'EOF'
@@ -82,7 +82,7 @@ case "$command" in
         ;;
     esac
     ;;
-  -h|--help|help)
+  -h | --help | help)
     usage
     ;;
   *)
