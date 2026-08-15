@@ -137,10 +137,56 @@ pretty_logs() {
     def gray($value): esc + "90m" + ($value | tostring) + reset;
     def faint($value): esc + "38;5;244m" + ($value | tostring) + reset;
 
+    def message_fields:
+      [
+        "message",
+        "msg",
+        "body",
+        "Body",
+        "text",
+        "error.message",
+        "exception.message",
+        "err.message",
+        "error",
+        "event.original",
+        "log.original",
+        "log"
+      ];
+
+    def stack_fields:
+      [
+        "stack_trace",
+        "stacktrace",
+        "stack",
+        "error.stack_trace",
+        "exception.stacktrace",
+        "exception.stack",
+        "exception.StackTrace",
+        "err.stack",
+        "error.stack",
+        "Exception",
+        "@x"
+      ];
+
+    def value_at($name):
+      . as $object
+      | if ($object | has($name)) and $object[$name] != null then
+          $object[$name]
+        else
+          try ($object | getpath($name | split("."))) catch null
+        end;
+
+    def has_field($names):
+      . as $object
+      | reduce $names[] as $name (
+          false;
+          . or (($object | value_at($name)) != null)
+        );
+
     def has_log_shape:
       type == "object"
       and (
-        has("message") or has("msg")
+        has_field(message_fields) or has_field(stack_fields)
         or has("level") or has("severity")
         or has("@timestamp") or has("timestamp")
         or has("logger_name") or has("logger")
@@ -150,11 +196,20 @@ pretty_logs() {
       . as $object
       | reduce $names[] as $name (
           null;
-          if . == null and ($object | has($name)) and $object[$name] != null
-          then $object[$name]
+          if . == null and ($object | value_at($name)) != null
+          then ($object | value_at($name))
           else .
           end
         ) // "";
+
+    def stringify_field:
+      if type == "array" then
+        map(tostring) | join("\n")
+      elif type == "object" then
+        tojson
+      else
+        tostring
+      end;
 
     def logger:
       (field(["logger_name", "logger", "loggerName"]) | tostring)
@@ -189,15 +244,19 @@ pretty_logs() {
 
     def format_log:
       [
-        (field(["@timestamp", "timestamp", "time", "ts"]) | if length > 0 then dim(.) else "" end),
-        (field(["level", "severity"]) | color_level),
-        field(["thread_name", "thread"]),
+        (field(["@timestamp", "timestamp", "time", "ts"]) | stringify_field | if length > 0 then dim(.) else "" end),
+        (field(["level", "severity"]) | stringify_field | color_level),
+        (field(["thread_name", "thread"]) | stringify_field),
         (logger | if length > 0 then cyan(.) else "" end),
-        field(["message", "msg"])
-      ]
-      | map(tostring)
-      | map(select(length > 0))
-      | join("  ");
+        (field(message_fields) | stringify_field)
+      ] as $parts
+      | (field(stack_fields) | stringify_field) as $stack
+      | ($parts | map(select(length > 0)) | join("  ")) as $line
+      | if $stack | length > 0 then
+          $line + "\n" + gray($stack)
+        else
+          $line
+        end;
 
     . as $raw
     | try (fromjson | if has_log_shape then format_log else ($raw | color_plaintext) end) catch ($raw | color_plaintext)
