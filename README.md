@@ -35,6 +35,7 @@ please follow api-7d9f8b6c9d-j2k4m app
 - timestamps are dimmed
 - log levels are colored by severity
 - logger names are highlighted
+- JSON stack traces are printed under the log message
 - stack traces and unparsed continuation lines get a subtle muted tint
 - existing ANSI colors in log messages are preserved
 
@@ -342,3 +343,11 @@ fucking nope jobs.batch import-123
 - enough Kubernetes permissions for whatever you ask the commands to do
 
 The commands themselves are small Bash scripts.
+
+## Test
+
+```sh
+tests/pretty-logs.sh
+bash -n bin/please completions/please.bash
+zsh -n completions/_please
+```
