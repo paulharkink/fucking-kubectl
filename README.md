@@ -347,9 +347,13 @@ The commands themselves are small Bash scripts.
 ## Test
 
 ```sh
-tests/pretty-logs.sh
-bash -n bin/please completions/please.bash
-zsh -n completions/_please
+./test.sh
 ```
 
-Tekton Pipelines as Code runs the same checks on pull requests, non-main branch pushes, and main pushes.
+The test runner covers log formatting, command translation, installer behavior,
+completion script smoke tests, and shell syntax checks. If `shellcheck` or
+`shfmt` are installed, it runs those too.
+
+Tekton Pipelines as Code runs the same entrypoint on pull requests, non-main
+branch pushes, and main pushes. CI installs `shellcheck`, so linting is enforced
+there even when it is optional locally.

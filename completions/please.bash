@@ -1,3 +1,5 @@
+# shellcheck shell=bash disable=SC2207
+
 _fk_pods() {
   kubectl "$@" get pods --no-headers -o custom-columns=:metadata.name 2>/dev/null
 }
@@ -38,12 +40,12 @@ _please_completion() {
 
   COMPREPLY=()
   cur="${COMP_WORDS[COMP_CWORD]}"
-  prev="${COMP_WORDS[COMP_CWORD-1]}"
+  prev="${COMP_WORDS[COMP_CWORD - 1]}"
 
   i=1
   while [ "$i" -lt "$COMP_CWORD" ]; do
     case "${COMP_WORDS[$i]}" in
-      -n|--namespace|--context|--kubeconfig)
+      -n | --namespace | --context | --kubeconfig)
         if [ $((i + 1)) -lt "$COMP_CWORD" ]; then
           kubectl_args+=("${COMP_WORDS[$i]}" "${COMP_WORDS[$((i + 1))]}")
           i=$((i + 2))
@@ -51,7 +53,7 @@ _please_completion() {
           break
         fi
         ;;
-      --namespace=*|--context=*|--kubeconfig=*)
+      --namespace=* | --context=* | --kubeconfig=*)
         kubectl_args+=("${COMP_WORDS[$i]}")
         i=$((i + 1))
         ;;
@@ -71,7 +73,7 @@ _please_completion() {
   done
 
   case "$prev" in
-    -n|--namespace)
+    -n | --namespace)
       COMPREPLY=($(compgen -W "$(_fk_namespaces "${kubectl_args[@]}")" -- "$cur"))
       return 0
       ;;
@@ -127,7 +129,7 @@ _please_completion() {
   relative=$((${#positionals[@]} + 1))
 
   case "$command" in
-    stop|die|why|sherlock)
+    stop | die | why | sherlock)
       if [ "$relative" -eq 1 ]; then
         COMPREPLY=($(compgen -W "$(_fk_pods "${kubectl_args[@]}")" -- "$cur"))
       fi
@@ -144,7 +146,7 @@ _please_completion() {
         COMPREPLY=($(compgen -W "$(_fk_resource_names "${positionals[0]}" "${kubectl_args[@]}")" -- "$cur"))
       fi
       ;;
-    invade|follow)
+    invade | follow)
       if [ "$relative" -eq 1 ]; then
         COMPREPLY=($(compgen -W "$(_fk_pods "${kubectl_args[@]}")" -- "$cur"))
       elif [ "$relative" -eq 2 ]; then

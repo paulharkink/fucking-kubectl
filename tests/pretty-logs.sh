@@ -1,45 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_root="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=tests/test-lib.sh
+source "$(dirname "${BASH_SOURCE[0]}")/test-lib.sh"
 please="$repo_root/bin/please"
-
-strip_ansi() {
-  sed -E $'s/\x1b\\[[0-9;]*m//g'
-}
 
 run_pretty() {
   "$please" pretty | strip_ansi
-}
-
-assert_eq() {
-  local name="$1"
-  local expected="$2"
-  local actual="$3"
-
-  if [ "$actual" != "$expected" ]; then
-    printf 'not ok - %s\n' "$name" >&2
-    printf 'expected:\n%s\n' "$expected" >&2
-    printf 'actual:\n%s\n' "$actual" >&2
-    exit 1
-  fi
-
-  printf 'ok - %s\n' "$name"
-}
-
-assert_contains() {
-  local name="$1"
-  local needle="$2"
-  local haystack="$3"
-
-  if [[ "$haystack" != *"$needle"* ]]; then
-    printf 'not ok - %s\n' "$name" >&2
-    printf 'missing: %s\n' "$needle" >&2
-    printf 'actual:\n%s\n' "$haystack" >&2
-    exit 1
-  fi
-
-  printf 'ok - %s\n' "$name"
 }
 
 message_cases=$(
